@@ -256,26 +256,33 @@ function renderOverallTrend(data) {
   }
 
   function parseReasonSections(text = "") {
-    const rawLines = reasonLines(text).map(normalizeReasonLine).filter(Boolean);
     const keys = ["主因", "傳導", "風險情境", "觀察指標", "失效條件"];
     const sections = Object.fromEntries(keys.map((k) => [k, ""]));
 
-    let currentKey = "";
-    for (const line of rawLines) {
-      const m = line.match(/^(主因|傳導|風險情境|觀察指標|失效條件)\s*[:：]\s*(.*)$/);
-      if (m) {
-        currentKey = m[1];
-        sections[currentKey] = (m[2] || "").trim();
-        continue;
-      }
-      if (currentKey) {
-        sections[currentKey] = sections[currentKey]
-          ? `${sections[currentKey]}\n${line}`
-          : line;
-      }
+    const raw = stripHtml(text)
+      .replace(/\r\n/g, "\n")
+      .trim();
+
+    if (!raw) return { keys, sections, rawText: "" };
+
+    const re = /(主因|傳導|風險情境|觀察指標|失效條件)\s*[:：]/g;
+    const matches = Array.from(raw.matchAll(re));
+
+    if (matches.length === 0) {
+      return { keys, sections, rawText: raw };
     }
 
-    return { keys, sections, rawLines };
+    for (let i = 0; i < matches.length; i += 1) {
+      const key = matches[i][1];
+      const start = (matches[i].index ?? 0) + matches[i][0].length;
+      const end = i + 1 < matches.length ? (matches[i + 1].index ?? raw.length) : raw.length;
+      let content = raw.slice(start, end).trim();
+      content = content.replace(/^[\s\-–—.。；;:：]+/, "").trim();
+      content = content.replace(/[；;]/g, "\n");
+      sections[key] = content;
+    }
+
+    return { keys, sections, rawText: raw };
   }
 
   function renderBlock({ title, horizon, trend, condition, reason }) {
@@ -288,7 +295,7 @@ function renderOverallTrend(data) {
     const sections = parsed.sections;
 
     const hasAnySection = keys.some((k) => Boolean(String(sections[k] || "").trim()));
-    const fallbackText = hasAnySection ? "" : (parsed.rawLines.join("\n") || "");
+    const fallbackText = hasAnySection ? "" : (parsed.rawText || "");
 
     const conditionLine = hasCondition
       ? `<div class="reason-row"><div class="reason-key">附帶條件</div><div class="reason-val">${colorizeBiasWords(condition)}</div></div>`
