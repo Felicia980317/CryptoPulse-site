@@ -251,8 +251,13 @@ function renderOverview(data) {
   const cards = [
     {
       title: "短線總趨勢（模型評估）",
-      valueHtml: biasSpan(overview.shortTermTrend || "短線震盪"),
-      sub: `依據：幣圈偏多 ${trendBasis.bullishSignals ?? 0} / 偏空 ${trendBasis.bearishSignals ?? 0}；外部風險偏多 ${trendBasis.riskBull ?? 0} / 偏空 ${trendBasis.riskBear ?? 0}`
+      valueHtml: biasSpan(overview.shortTermTrend || "震盪"),
+      sub: `${overview.shortTrendReason || `依據：幣圈偏多 ${trendBasis.bullishSignals ?? 0} / 偏空 ${trendBasis.bearishSignals ?? 0}；外部風險偏多 ${trendBasis.riskBull ?? 0} / 偏空 ${trendBasis.riskBear ?? 0}`}｜模型：${overview.trendModelMeta?.mode || "fallback"}/${overview.trendModelMeta?.model || "rule-based"}`
+    },
+    {
+      title: "長線總趨勢（模型評估）",
+      valueHtml: biasSpan(overview.longTermTrend || "震盪"),
+      sub: `${overview.longTrendReason || "依宏觀與風險結構推估"}｜觀察週期：1-3 個月`
     },
     {
       title: rateCutOutlook.mode === "concrete" ? "降息機率（市場隱含）" : "降息機率（模型估算）",
