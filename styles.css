@@ -161,7 +161,7 @@ h2 { margin-bottom: 12px; }
 
 .reason-row {
   display: grid;
-  grid-template-columns: 92px 1fr;
+  grid-template-columns: 120px 1fr;
   gap: 10px;
   align-items: start;
 }

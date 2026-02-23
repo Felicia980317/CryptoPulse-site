@@ -256,7 +256,18 @@ function renderOverallTrend(data) {
   }
 
   function parseReasonSections(text = "") {
-    const keys = ["主因", "傳導", "風險情境", "觀察指標", "失效條件"];
+    const keys = [
+      "政治/政策",
+      "央行/利率",
+      "美/日政策",
+      "機構資金流",
+      "巨鯨/鏈上",
+      "散戶/槓桿",
+      "市場結構",
+      "催化/節奏",
+      "觀察指標",
+      "失效條件"
+    ];
     const sections = Object.fromEntries(keys.map((k) => [k, ""]));
 
     const raw = stripHtml(text)
@@ -265,7 +276,11 @@ function renderOverallTrend(data) {
 
     if (!raw) return { keys, sections, rawText: "" };
 
-    const re = /(主因|傳導|風險情境|觀察指標|失效條件)\s*[:：]/g;
+    const escaped = keys
+      .slice()
+      .sort((a, b) => b.length - a.length)
+      .map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const re = new RegExp(`(${escaped.join("|")})\\s*[:：]`, "g");
     const matches = Array.from(raw.matchAll(re));
 
     if (matches.length === 0) {
