@@ -372,6 +372,7 @@ function renderOverview(data) {
   root.innerHTML = "";
 
   const overview = data.marketOverview || {};
+  const marketIntel = data.marketIntel || {};
   const whale = data.whaleTrend || {};
   const nextHigh = overview.nextHighImpact;
   const rateCutOutlook = buildRateCutOutlook(data);
@@ -392,7 +393,58 @@ function renderOverview(data) {
     ? `${fmt.format(new Date(nextHigh.datetime))} ${nextHigh.title}`
     : "未來 7 天暫無高影響事件";
 
+  const global = marketIntel.global;
+  const prices = marketIntel.prices;
+  const sentiment = marketIntel.sentiment;
+
+  const marketCapText = global?.totalMarketCapUsd
+    ? `$${Math.round(global.totalMarketCapUsd / 1e9).toLocaleString()}B`
+    : "—";
+  const volText = global?.totalVolumeUsd
+    ? `$${Math.round(global.totalVolumeUsd / 1e9).toLocaleString()}B`
+    : "—";
+  const capChgText = Number.isFinite(global?.marketCapChangePct24hUsd)
+    ? `${global.marketCapChangePct24hUsd.toFixed(2)}%`
+    : "—";
+  const btcDomText = Number.isFinite(global?.btcDominancePct)
+    ? `${global.btcDominancePct.toFixed(1)}%`
+    : "—";
+  const btcText = prices?.btc?.usd
+    ? `$${Math.round(prices.btc.usd).toLocaleString()}`
+    : "—";
+  const btcChgText = Number.isFinite(prices?.btc?.usdChangePct24h)
+    ? `${prices.btc.usdChangePct24h.toFixed(2)}%`
+    : "—";
+  const ethText = prices?.eth?.usd
+    ? `$${Math.round(prices.eth.usd).toLocaleString()}`
+    : "—";
+  const ethChgText = Number.isFinite(prices?.eth?.usdChangePct24h)
+    ? `${prices.eth.usdChangePct24h.toFixed(2)}%`
+    : "—";
+  const fngText = Number.isFinite(sentiment?.fearGreedValue)
+    ? `${sentiment.fearGreedValue}（${sentiment.fearGreedClassification || ""}）`
+    : "—";
+
   const cards = [
+    {
+      title: "全市場（CoinGecko）",
+      valueHtml: marketCapText,
+      subLines: [
+        `24h 市值變化：${capChgText}`,
+        `24h 成交量：${volText}`,
+        `BTC Dominance：${btcDomText}`
+      ]
+    },
+    {
+      title: "BTC / ETH（24h）",
+      valueHtml: `${btcText} / ${ethText}`,
+      subLines: [`BTC：${btcChgText}｜ETH：${ethChgText}`]
+    },
+    {
+      title: "情緒指標（Fear & Greed）",
+      valueHtml: fngText,
+      subLines: ["僅供情緒參考，建議搭配資金流/槓桿與宏觀事件判讀。"]
+    },
     {
       title: rateCutOutlook.mode === "concrete" ? "降息機率（市場隱含）" : "降息機率（模型估算）",
       valueHtml: probabilitySpan(rateCutOutlook.probability),
