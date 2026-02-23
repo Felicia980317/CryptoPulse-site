@@ -11,6 +11,9 @@ const STATUS_TEXT = { upcoming: "未來", recent: "近期 / 已公布" };
 const COUNTRY_TEXT = { US: "美國", JP: "日本" };
 const SIGNAL_CATEGORY_TEXT = { flow: "資金流", regulation: "監管", risk: "風險", macro: "宏觀", market: "市場" };
 const SIGNAL_IMPACT_TEXT = { high: "高", medium: "中", low: "低" };
+const UPSTASH_URL = "https://guided-spider-19708.upstash.io";
+const UPSTASH_READ_TOKEN = "Akz8AAIgcDE18SAeYebRfjHOi1t_RtbOFNv2r3NHF0kLYfDIUMnEOw";
+const UPSTASH_KEY = "crypto_dashboard:latest";
 
 let dashboardData = null;
 let onlyHighImpact = false;
@@ -48,9 +51,28 @@ function colorizeBiasWords(text = "") {
 }
 
 async function loadData() {
-  const response = await fetch(`./data/latest.json?t=${Date.now()}`);
-  if (!response.ok) throw new Error("無法載入最新資料");
-  return response.json();
+  const upstashResponse = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(UPSTASH_KEY)}`, {
+    headers: {
+      Authorization: `Bearer ${UPSTASH_READ_TOKEN}`
+    }
+  });
+
+  if (!upstashResponse.ok) {
+    throw new Error("無法從 Upstash 載入最新資料");
+  }
+
+  const payload = await upstashResponse.json();
+  const result = payload?.result;
+
+  if (typeof result === "string") {
+    return JSON.parse(result);
+  }
+
+  if (result && typeof result === "object") {
+    return result;
+  }
+
+  throw new Error("Upstash 回傳資料格式異常");
 }
 
 function renderMeta(data) {
