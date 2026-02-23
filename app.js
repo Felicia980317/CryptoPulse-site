@@ -218,8 +218,11 @@ function renderOverallTrend(data) {
   const el = document.getElementById("overall-trend");
   const overview = data.marketOverview || {};
   const summary = overview.overallSummary || "目前市場趨勢資料整理中。";
+  const short = overview.shortTermTrend || "待AI評估";
+  const mid = overview.midTermTrend || "待AI評估";
+  const long = overview.longTermTrend || "待AI評估";
   const external = overview.externalRiskBias || "外部風險中性";
-  el.innerHTML = `<strong>整體趨勢：</strong>${colorizeBiasWords(summary)}｜<strong>外部風險：</strong>${biasSpan(external)}`;
+  el.innerHTML = `<strong>整體趨勢：</strong>${colorizeBiasWords(summary)}<br><strong>短/中/長：</strong>短線（1-7天）${biasSpan(short)} / 中線（2-6週）${biasSpan(mid)} / 長線（1-3個月）${biasSpan(long)}<br><strong>外部風險：</strong>${biasSpan(external)}`;
 }
 
 function renderOverview(data) {
@@ -250,10 +253,11 @@ function renderOverview(data) {
 
   const cards = [
     {
-      title: "短線/長線總趨勢（模型評估）",
-      valueHtml: `短線（1-7天）：${biasSpan(overview.shortTermTrend || "震盪")}｜長線（1-3個月）：${biasSpan(overview.longTermTrend || "震盪")}`,
+      title: "短/中/長線總趨勢（模型評估）",
+      valueHtml: `短線（1-7天）：${biasSpan(overview.shortTermTrend || "震盪")}｜中線（2-6週）：${biasSpan(overview.midTermTrend || "震盪")}｜長線（1-3個月）：${biasSpan(overview.longTermTrend || "震盪")}`,
       subLines: [
         `短線依據：${overview.shortTrendReason || `幣圈偏多 ${trendBasis.bullishSignals ?? 0} / 偏空 ${trendBasis.bearishSignals ?? 0}；外部風險偏多 ${trendBasis.riskBull ?? 0} / 偏空 ${trendBasis.riskBear ?? 0}`}`,
+        `中線依據：${overview.midTrendReason || "依近 2-6 週宏觀與風險結構推估"}`,
         `長線依據：${overview.longTrendReason || "依宏觀與風險結構推估"}`,
         `模型：${overview.trendModelMeta?.mode || "fallback"}/${overview.trendModelMeta?.model || "rule-based"}`
       ]
@@ -283,7 +287,7 @@ function renderOverview(data) {
     {
       title: "高風險重點",
       valueHtml: highRisk ? stripHtml(highRisk.keyChange || highRisk.zhTitle || highRisk.title) : "目前無高風險訊號",
-      subLines: highRisk ? [`短線：${stripHtml(highRisk.shortTermBias || "震盪")}`] : [],
+      subLines: highRisk ? [`短線（1-7天）：${stripHtml(highRisk.shortTermBias || "震盪")}`] : [],
       targetId: "crypto-section"
     },
     {
@@ -292,7 +296,7 @@ function renderOverview(data) {
       subLines: latestExternal
         ? [
           `時間：${latestExternalTimeText}`,
-          `方向：${stripHtml(latestExternal.shortTermBias || "震盪")}`
+          `短線（1-7天）：${stripHtml(latestExternal.shortTermBias || "震盪")}`
         ]
         : [],
       targetId: "risk-section"
@@ -413,7 +417,7 @@ function renderSignals(data) {
     const changeText = stripHtml(signal.keyChange || "關鍵變化整理中");
     const shortBias = stripHtml(signal.shortTermBias || "震盪");
     const mergedHint = Number(signal.mergedCount || 1) > 1
-      ? `<p class="kv">已整合同類訊息 ${signal.mergedCount} 則</p>`
+      ? `<div class="kv"><div>已整合同類訊息 ${signal.mergedCount} 則</div></div>`
       : "";
 
     const card = document.createElement("article");
@@ -421,7 +425,11 @@ function renderSignals(data) {
     card.innerHTML = `
       <h3><a href="${signal.source}" target="_blank" rel="noreferrer">${signal.zhTitle || signal.title}</a></h3>
       <div>${fmt.format(new Date(signal.time))}</div>
-      <div class="kv">分類：${SIGNAL_CATEGORY_TEXT[signal.category] || signal.category} / 影響：${SIGNAL_IMPACT_TEXT[signal.impact] || signal.impact} / 短線：${biasSpan(shortBias)}</div>
+      <div class="kv">
+        <div>分類：${SIGNAL_CATEGORY_TEXT[signal.category] || signal.category}</div>
+        <div>影響：${SIGNAL_IMPACT_TEXT[signal.impact] || signal.impact}</div>
+        <div>短線（1-7天）：${biasSpan(shortBias)}</div>
+      </div>
       <p class="change"><strong>具體變化：</strong>${changeText}</p>
       <p>${summary}</p>
       <p class="impact"><strong>對虛擬幣影響：</strong>${impactText}</p>
@@ -440,13 +448,13 @@ function renderWhale(data) {
   const detailList = details.length === 0
     ? "<div class=\"kv\">近期無可用巨鯨明確紀錄。</div>"
     : `<ul class=\"whale-list\">${details
-      .map((item) => `<li><strong>${fmt.format(new Date(item.time))}</strong>｜${stripHtml(item.actor)}｜${stripHtml(item.action)}｜${biasSpan(stripHtml(item.bias || "震盪"))}</li>`)
+      .map((item) => `<li><div><strong>${fmt.format(new Date(item.time))}</strong></div><div>主體：${stripHtml(item.actor)}</div><div>動作：${stripHtml(item.action)}</div><div>短線（1-7天）：${biasSpan(stripHtml(item.bias || "震盪"))}</div></li>`)
       .join("")}</ul>`;
 
   root.innerHTML = `
     <h3>巨鯨風向：${biasSpan(whale.trend || "中性")}</h3>
-    <div class="kv">${whale.summary || "近期無足夠巨鯨線索"}</div>
-    <div class="kv">偏多：${whale.bull ?? 0} / 偏空：${whale.bear ?? 0} / 中性：${whale.neutral ?? 0}</div>
+    <div class="kv"><div>${whale.summary || "近期無足夠巨鯨線索"}</div></div>
+    <div class="kv"><div>偏多：${whale.bull ?? 0}</div><div>偏空：${whale.bear ?? 0}</div><div>中性：${whale.neutral ?? 0}</div></div>
     ${detailList}
   `;
 }
@@ -469,7 +477,7 @@ function renderGlobalRisks(data) {
   risks.forEach((risk) => {
     const translatedChange = translateRiskText(risk.keyChange || risk.title);
     const mergedHint = Number(risk.mergedCount || 1) > 1
-      ? `<p class="kv">已整合同類事件 ${risk.mergedCount} 則</p>`
+      ? `<div class="kv"><div>已整合同類事件 ${risk.mergedCount} 則</div></div>`
       : "";
     const card = document.createElement("article");
     card.className = "card";
@@ -478,7 +486,7 @@ function renderGlobalRisks(data) {
       <div>${fmt.format(new Date(risk.time))}</div>
       <p class="change"><strong>具體變化：</strong>${translatedChange}</p>
       <p class="impact"><strong>對虛擬幣影響：</strong>${stripHtml(risk.cryptoImpact)}</p>
-      <p class="analysis-note"><strong>短期方向：</strong>${biasSpan(stripHtml(risk.shortTermBias || "震盪"))}</p>
+      <div class="kv"><div><strong>短線（1-7天）方向：</strong>${biasSpan(stripHtml(risk.shortTermBias || "震盪"))}</div></div>
       ${mergedHint}
     `;
     root.appendChild(card);

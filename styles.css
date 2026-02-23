@@ -190,6 +190,10 @@ td.analysis {
   line-height: 1.6;
 }
 
+.whale-list li div + div {
+  margin-top: 2px;
+}
+
 .badge {
   display: inline-block;
   padding: 2px 8px;
