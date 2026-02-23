@@ -39,7 +39,7 @@ function toTimestamp(value) {
 
 function biasClass(text = "") {
   const t = String(text);
-  if (/待確認|待公布|待判讀|判讀中|待AI評估/i.test(t)) return "bias-muted";
+  if (/待確認|待公布|待判讀|判讀中/i.test(t)) return "bias-muted";
   if (/偏漲|偏多|上漲|多頭|\bup\b/i.test(t)) return "bias-up";
   if (/偏跌|偏空|下跌|空頭|\bdown\b/i.test(t)) return "bias-down";
   return "bias-side";
@@ -51,7 +51,7 @@ function biasSpan(text = "") {
 
 function colorizeBiasWords(text = "") {
   return stripHtml(text)
-    .replace(/待公布後判讀|待公布|待確認|待判讀|判讀中|待AI評估/g, '<span class="bias-muted">$&</span>')
+    .replace(/待公布後判讀|待公布|待確認|待判讀|判讀中/g, '<span class="bias-muted">$&</span>')
     .replace(/偏漲|偏多|上漲|多頭/g, '<span class="bias-up">$&</span>')
     .replace(/偏跌|偏空|下跌|空頭/g, '<span class="bias-down">$&</span>')
     .replace(/震盪/g, '<span class="bias-side">$&</span>');
@@ -161,7 +161,7 @@ function signedSpan(value, { digits = 2, unit = "", reverse = false, prefix = ""
 
 function colorizeBiasWordsKeepHtml(text = "") {
   return String(text)
-    .replace(/待公布後判讀|待公布|待確認|待判讀|判讀中|待AI評估/g, '<span class="bias-muted">$&</span>')
+    .replace(/待公布後判讀|待公布|待確認|待判讀|判讀中/g, '<span class="bias-muted">$&</span>')
     .replace(/偏漲|偏多|上漲|多頭/g, '<span class="bias-up">$&</span>')
     .replace(/偏跌|偏空|下跌|空頭/g, '<span class="bias-down">$&</span>')
     .replace(/震盪/g, '<span class="bias-side">$&</span>');
@@ -289,9 +289,9 @@ function renderMeta(data) {
 function renderOverallTrend(data) {
   const el = document.getElementById("overall-trend");
   const overview = data.marketOverview || {};
-  const short = overview.shortTermTrend || "待AI評估";
-  const mid = overview.midTermTrend || "待AI評估";
-  const long = overview.longTermTrend || "待AI評估";
+  const short = overview.shortTermTrend || "震盪";
+  const mid = overview.midTermTrend || "震盪";
+  const long = overview.longTermTrend || "震盪";
   const shortReason = overview.shortTrendReason || "短線理由尚未生成";
   const midReason = overview.midTrendReason || "中線理由尚未生成";
   const longReason = overview.longTrendReason || "長線理由尚未生成";
@@ -299,9 +299,8 @@ function renderOverallTrend(data) {
   const midCond = overview.midTermCondition || "";
   const longCond = overview.longTermCondition || "";
   const external = overview.externalRiskBias || "外部風險中性";
-  const mode = overview.trendModelMeta?.mode || "fallback";
-  const model = `${mode}/${overview.trendModelMeta?.model || "rule-based"}`;
-  const title = mode === "manual_trader" ? "短/中/長線總趨勢（交易員判斷）" : "短/中/長線總趨勢（模型評估）";
+  const title = "短/中/長線總趨勢（交易員評估｜每次更新重算）";
+  <div class="kv"><div><strong>外部風險：</strong>${biasSpan(external)}</div></div>
 
   function reasonLines(text = "") {
     const raw = stripHtml(text);
@@ -690,7 +689,7 @@ function renderOverview(data) {
       targetId: "crypto-section"
     },
     {
-      title: rateCutOutlook.mode === "concrete" ? "降息機率（市場隱含）" : "降息機率（模型估算）",
+      title: rateCutOutlook.mode === "concrete" ? "降息機率（市場隱含）" : "降息機率（交易員估算）",
       valueHtml: probabilitySpan(rateCutOutlook.probability),
       subLines: rateCutOutlook.mode === "concrete"
         ? [
@@ -701,7 +700,7 @@ function renderOverview(data) {
         : [
           `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）`,
           `依據：${rateCutOutlook.basis || "FOMC/CPI/NFP/外部風險"}`,
-          "模型評估（非官方機率）"
+          "估算（非官方機率）"
         ],
       targetId: "macro-section"
     },
