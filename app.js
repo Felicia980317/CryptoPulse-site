@@ -373,6 +373,9 @@ function renderOverview(data) {
 
   const overview = data.marketOverview || {};
   const marketIntel = data.marketIntel || {};
+  const policySignals = data.policySignals || [];
+  const ratesLatest = data.ratesIntel?.latest || null;
+  const liquidityIntel = data.liquidityIntel || {};
   const whale = data.whaleTrend || {};
   const nextHigh = overview.nextHighImpact;
   const rateCutOutlook = buildRateCutOutlook(data);
@@ -380,6 +383,71 @@ function renderOverview(data) {
   const highRisk = (data.cryptoSignals || [])
     .filter((signal) => signal.impact === "high")
     .sort((a, b) => new Date(b.time) - new Date(a.time))[0] || null;
+
+  const parseUsdAmount = (text = "") => {
+    const raw = String(text);
+    // $288M / 1.2B / 300,000,000
+    const m = raw.match(/\$\s*([\d,.]+)\s*([kKmMbB])?/);
+    if (m) {
+      const n = Number(String(m[1]).replace(/,/g, ""));
+      if (!Number.isFinite(n)) return null;
+      const unit = String(m[2] || "").toUpperCase();
+      if (unit === "K") return n * 1e3;
+      if (unit === "M") return n * 1e6;
+      if (unit === "B") return n * 1e9;
+      return n;
+    }
+
+    // 3.2 億 / 5000 萬
+    const zh = raw.match(/([\d.]+)\s*(億|萬)/);
+    if (zh) {
+      const n = Number(zh[1]);
+      if (!Number.isFinite(n)) return null;
+      const unit = zh[2];
+      if (unit === "億") return n * 1e8;
+      if (unit === "萬") return n * 1e4;
+    }
+
+    return null;
+  };
+
+  const days7 = 7 * 24 * 60 * 60 * 1000;
+  const recentSignals = (data.cryptoSignals || [])
+    .filter((s) => {
+      const t = new Date(s.time).getTime();
+      return Number.isFinite(t) && (Date.now() - t) <= days7;
+    });
+
+  const etfSignals = recentSignals.filter((s) => /\bETF\b/i.test(String(s.title || "")) || /\bETF\b/i.test(String(s.keyChange || "")));
+  let etfNetFlowUsd = 0;
+  let etfCountWithAmount = 0;
+  for (const s of etfSignals) {
+    const text = `${s.keyChange || ""} ${s.title || ""}`;
+    const amount = parseUsdAmount(text);
+    if (amount === null) continue;
+    const isOut = /流出|淨流出|outflow/i.test(text);
+    const isIn = /流入|淨流入|inflow/i.test(text);
+    const signed = isOut && !isIn ? -amount : amount;
+    etfNetFlowUsd += signed;
+    etfCountWithAmount += 1;
+  }
+  const etfNetFlowText = etfCountWithAmount > 0
+    ? `${etfNetFlowUsd >= 0 ? "+" : "-"}$${Math.round(Math.abs(etfNetFlowUsd) / 1e6).toLocaleString()}M`
+    : "—";
+
+  const liquidationSignals = recentSignals.filter((s) => /清算|liquidation/i.test(String(s.title || "")) || /清算|liquidation/i.test(String(s.keyChange || "")));
+  let liquidationTotalUsd = 0;
+  let liquidationCountWithAmount = 0;
+  for (const s of liquidationSignals) {
+    const text = `${s.keyChange || ""} ${s.title || ""}`;
+    const amount = parseUsdAmount(text);
+    if (amount === null) continue;
+    liquidationTotalUsd += Math.abs(amount);
+    liquidationCountWithAmount += 1;
+  }
+  const liquidationText = liquidationCountWithAmount > 0
+    ? `$${Math.round(liquidationTotalUsd / 1e6).toLocaleString()}M`
+    : "—";
 
   const latestExternal = (data.globalRiskSignals || [])
     .sort((a, b) => new Date(b.time) - new Date(a.time))[0] || null;
@@ -394,7 +462,6 @@ function renderOverview(data) {
     : "未來 7 天暫無高影響事件";
 
   const global = marketIntel.global;
-  const prices = marketIntel.prices;
   const sentiment = marketIntel.sentiment;
 
   const marketCapText = global?.totalMarketCapUsd
@@ -409,21 +476,41 @@ function renderOverview(data) {
   const btcDomText = Number.isFinite(global?.btcDominancePct)
     ? `${global.btcDominancePct.toFixed(1)}%`
     : "—";
-  const btcText = prices?.btc?.usd
-    ? `$${Math.round(prices.btc.usd).toLocaleString()}`
-    : "—";
-  const btcChgText = Number.isFinite(prices?.btc?.usdChangePct24h)
-    ? `${prices.btc.usdChangePct24h.toFixed(2)}%`
-    : "—";
-  const ethText = prices?.eth?.usd
-    ? `$${Math.round(prices.eth.usd).toLocaleString()}`
-    : "—";
-  const ethChgText = Number.isFinite(prices?.eth?.usdChangePct24h)
-    ? `${prices.eth.usdChangePct24h.toFixed(2)}%`
-    : "—";
   const fngText = Number.isFinite(sentiment?.fearGreedValue)
     ? `${sentiment.fearGreedValue}（${sentiment.fearGreedClassification || ""}）`
     : "—";
+
+  const y10Text = Number.isFinite(ratesLatest?.y10y) ? `${ratesLatest.y10y.toFixed(2)}%` : "—";
+  const y2Text = Number.isFinite(ratesLatest?.y2y) ? `${ratesLatest.y2y.toFixed(2)}%` : "—";
+  const y3mText = Number.isFinite(ratesLatest?.y3m) ? `${ratesLatest.y3m.toFixed(2)}%` : "—";
+  const spread10y2yText = Number.isFinite(ratesLatest?.spread10y2y) ? `${ratesLatest.spread10y2y.toFixed(2)}%` : "—";
+  const spread10y3mText = Number.isFinite(ratesLatest?.spread10y3m) ? `${ratesLatest.spread10y3m.toFixed(2)}%` : "—";
+
+  const stable = liquidityIntel.stablecoins;
+  const defi = liquidityIntel.defi;
+
+  const stableMcapText = Number.isFinite(stable?.totalMcapUsd)
+    ? `$${Math.round(stable.totalMcapUsd / 1e9).toLocaleString()}B`
+    : "—";
+  const stableChgText = Number.isFinite(stable?.change7dPct)
+    ? `${stable.change7dPct.toFixed(2)}%`
+    : "—";
+  const defiTvlText = Number.isFinite(defi?.totalTvlUsd)
+    ? `$${Math.round(defi.totalTvlUsd / 1e9).toLocaleString()}B`
+    : "—";
+  const defiChgText = Number.isFinite(defi?.change7dPct)
+    ? `${defi.change7dPct.toFixed(2)}%`
+    : "—";
+
+  const nowTs = Date.now();
+  const policy7dCount = (policySignals || []).filter((s) => {
+    const t = new Date(s.time).getTime();
+    return Number.isFinite(t) && (nowTs - t) <= 7 * 24 * 60 * 60 * 1000;
+  }).length;
+  const latestPolicy = (policySignals || [])
+    .slice()
+    .sort((a, b) => new Date(b.time) - new Date(a.time))[0] || null;
+  const latestPolicyTitle = latestPolicy ? stripHtml(latestPolicy.title || latestPolicy.keyChange) : "—";
 
   const cards = [
     {
@@ -436,14 +523,50 @@ function renderOverview(data) {
       ]
     },
     {
-      title: "BTC / ETH（24h）",
-      valueHtml: `${btcText} / ${ethText}`,
-      subLines: [`BTC：${btcChgText}｜ETH：${ethChgText}`]
-    },
-    {
       title: "情緒指標（Fear & Greed）",
       valueHtml: fngText,
       subLines: ["僅供情緒參考，建議搭配資金流/槓桿與宏觀事件判讀。"]
+    },
+    {
+      title: "利率 / 殖利率（US Treasury）",
+      valueHtml: `10Y：${y10Text}`,
+      subLines: [
+        `2Y：${y2Text}｜3M：${y3mText}`,
+        `10Y-2Y：${spread10y2yText}｜10Y-3M：${spread10y3mText}`,
+        ratesLatest?.date ? `資料日：${ratesLatest.date}` : ""
+      ]
+    },
+    {
+      title: "穩定幣流動性（DeFiLlama）",
+      valueHtml: stableMcapText,
+      subLines: [`近 7 日變化：${stableChgText}`]
+    },
+    {
+      title: "DeFi TVL（DeFiLlama）",
+      valueHtml: defiTvlText,
+      subLines: [Number.isFinite(defi?.change7dPct) ? `近 7 日變化：${defiChgText}` : "（未提供 7D 變化）"]
+    },
+    {
+      title: "政策 / 監管熱度（7D）",
+      valueHtml: `${policy7dCount} 則`,
+      subLines: latestPolicy ? [`最新：${latestPolicyTitle}`] : ["—"],
+      targetId: "policy-section"
+    },
+    {
+      title: "ETF / 機構流向（7D，訊號整合）",
+      valueHtml: etfNetFlowText,
+      subLines: [
+        etfCountWithAmount > 0 ? `含金額訊號：${etfCountWithAmount} 則` : "（近 7 日未抓到可解析金額的 ETF 流向訊號）"
+      ],
+      targetId: "crypto-section"
+    },
+    {
+      title: "槓桿清算規模（7D，訊號整合）",
+      valueHtml: liquidationText,
+      subLines: [
+        liquidationCountWithAmount > 0 ? `含金額訊號：${liquidationCountWithAmount} 則` : "（近 7 日未抓到可解析金額的清算訊號）"
+      ],
+      targetId: "crypto-section"
     },
     {
       title: rateCutOutlook.mode === "concrete" ? "降息機率（市場隱含）" : "降息機率（模型估算）",
@@ -508,6 +631,45 @@ function renderOverview(data) {
       ? `<div class="kv">${normalizedSubLines.map((line) => `<div>${colorizeBiasWords(line)}</div>`).join("")}</div>`
       : "";
     card.innerHTML = `${titleHtml}${valueHtml}${subHtml}`;
+    root.appendChild(card);
+  });
+}
+
+function renderPolicySignals(data) {
+  const root = document.getElementById("policy-signals");
+  if (!root) return;
+  root.innerHTML = "";
+
+  const items = [...(data.policySignals || [])]
+    .sort((a, b) => toTimestamp(b.time) - toTimestamp(a.time))
+    .slice(0, 9);
+
+  if (items.length === 0) {
+    const card = document.createElement("article");
+    card.className = "card";
+    card.innerHTML = "<h3>目前無可用政策/監管訊號</h3><p>來源為官方 RSS；若來源暫時不可用，稍後會自動恢復。</p>";
+    root.appendChild(card);
+    return;
+  }
+
+  items.forEach((item) => {
+    const title = stripHtml(item.title || item.keyChange || "");
+    const sourceName = stripHtml(item.sourceName || "官方來源");
+    const impact = stripHtml(item.impact || "medium");
+    const bias = stripHtml(item.shortTermBias || "震盪");
+
+    const card = document.createElement("article");
+    card.className = "card";
+    card.innerHTML = `
+      <h3><a href="${item.source}" target="_blank" rel="noreferrer">${title}</a></h3>
+      <div>${item.time ? fmt.format(new Date(item.time)) : "時間未知"}</div>
+      <div class="kv">
+        <div>來源：${sourceName}</div>
+        <div>影響：${SIGNAL_IMPACT_TEXT[impact] || impact}</div>
+        <div>短線（1-7天）：${biasSpan(bias)}</div>
+      </div>
+      <p class="impact"><strong>對虛擬幣影響：</strong>${stripHtml(item.cryptoImpact || "—")}</p>
+    `;
     root.appendChild(card);
   });
 }
@@ -685,6 +847,7 @@ function renderAll(data) {
   renderMacro(data);
   renderSignals(data);
   renderWhale(data);
+  renderPolicySignals(data);
   renderGlobalRisks(data);
 }
 
