@@ -107,10 +107,18 @@ function buildRateCutOutlook(data) {
   }
 
   const nextDate = new Date(upcomingFomc.datetime);
+  const basis = [
+    `FOMC：${recentFomc?.result?.actual || "未提供"}`,
+    `CPI短線：${recentCpi?.result?.shortTermBias || "未提供"}`,
+    `NFP短線：${recentNfp?.result?.shortTermBias || "未提供"}`,
+    `外部風險偏向：${riskBear > riskBull ? "偏空" : riskBull > riskBear ? "偏多" : "中性"}`
+  ].join(" / ");
+
   return {
     probability,
     monthLabel: `${nextDate.getFullYear()}年${nextDate.getMonth() + 1}月`,
-    eventTitle: upcomingFomc.title
+    eventTitle: upcomingFomc.title,
+    basis
   };
 }
 
@@ -223,9 +231,9 @@ function renderOverview(data) {
       sub: "整合宏觀、外部風險、幣圈訊號"
     },
     {
-      title: "降息機率",
+      title: "降息機率（模型估算）",
       valueHtml: probabilitySpan(rateCutOutlook.probability),
-      sub: `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）`,
+      sub: `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）｜依據：${rateCutOutlook.basis || "FOMC/CPI/NFP/外部風險"}｜非 FedWatch 官方機率`,
       targetId: "macro-section"
     },
     {
