@@ -300,7 +300,6 @@ function renderOverallTrend(data) {
   const longCond = overview.longTermCondition || "";
   const external = overview.externalRiskBias || "外部風險中性";
   const title = "短/中/長線總趨勢（交易員評估｜每次更新重算）";
-  <div class="kv"><div><strong>外部風險：</strong>${biasSpan(external)}</div></div>
 
   function reasonLines(text = "") {
     const raw = stripHtml(text);
