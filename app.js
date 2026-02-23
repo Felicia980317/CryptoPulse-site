@@ -39,7 +39,7 @@ function toTimestamp(value) {
 
 function biasClass(text = "") {
   const t = String(text);
-  if (/待確認|待公布|待判讀|判讀中/i.test(t)) return "bias-muted";
+  if (/待確認|待公布|待判讀|判讀中|待AI評估/i.test(t)) return "bias-muted";
   if (/偏漲|偏多|上漲|多頭|\bup\b/i.test(t)) return "bias-up";
   if (/偏跌|偏空|下跌|空頭|\bdown\b/i.test(t)) return "bias-down";
   return "bias-side";
@@ -51,7 +51,7 @@ function biasSpan(text = "") {
 
 function colorizeBiasWords(text = "") {
   return stripHtml(text)
-    .replace(/待公布後判讀|待公布|待確認|待判讀|判讀中/g, '<span class="bias-muted">$&</span>')
+    .replace(/待公布後判讀|待公布|待確認|待判讀|判讀中|待AI評估/g, '<span class="bias-muted">$&</span>')
     .replace(/偏漲|偏多|上漲|多頭/g, '<span class="bias-up">$&</span>')
     .replace(/偏跌|偏空|下跌|空頭/g, '<span class="bias-down">$&</span>')
     .replace(/震盪/g, '<span class="bias-side">$&</span>');
