@@ -490,32 +490,59 @@ function renderOverview(data) {
       return Number.isFinite(t) && (Date.now() - t) <= days7;
     });
 
-  const etfSignals = recentSignals.filter((s) => /\bETF\b/i.test(String(s.title || "")) || /\bETF\b/i.test(String(s.keyChange || "")));
+  const metrics7d = data.cryptoSignalMetrics7d || null;
+
   let etfNetFlowUsd = 0;
   let etfCountWithAmount = 0;
-  for (const s of etfSignals) {
-    const text = `${s.keyChange || ""} ${s.title || ""}`;
-    const amount = parseUsdAmount(text);
-    if (amount === null) continue;
-    const isOut = /流出|淨流出|outflow/i.test(text);
-    const isIn = /流入|淨流入|inflow/i.test(text);
-    const signed = isOut && !isIn ? -amount : amount;
-    etfNetFlowUsd += signed;
-    etfCountWithAmount += 1;
+  if (metrics7d && Number.isFinite(metrics7d.etfNetFlowUsd) && Number.isFinite(metrics7d.etfCountWithAmount)) {
+    etfNetFlowUsd = Number(metrics7d.etfNetFlowUsd);
+    etfCountWithAmount = Number(metrics7d.etfCountWithAmount);
+  } else {
+    const etfSignals = recentSignals.filter((s) => {
+      const blob = `${s.title || ""} ${s.keyChange || ""} ${s.zhTitle || ""}`;
+      return /\bETF\b/i.test(blob) || /ETF/.test(blob);
+    });
+    for (const s of etfSignals) {
+      const text = `${s.keyChange || ""} ${s.title || ""} ${s.zhTitle || ""}`;
+      const amount = parseUsdAmount(text);
+      if (amount === null || amount < 5e6) continue;
+
+      const isOut = /net\s+outflow|淨流出|outflow/i.test(text);
+      const isIn = /net\s+inflow|淨流入|inflow/i.test(text);
+      if (isOut === isIn) continue;
+
+      const signed = isOut ? -amount : amount;
+      etfNetFlowUsd += signed;
+      etfCountWithAmount += 1;
+    }
   }
   const etfNetFlowText = etfCountWithAmount > 0
     ? `${etfNetFlowUsd >= 0 ? "+" : "-"}$${Math.round(Math.abs(etfNetFlowUsd) / 1e6).toLocaleString()}M`
     : "—";
 
-  const liquidationSignals = recentSignals.filter((s) => /清算|liquidation/i.test(String(s.title || "")) || /清算|liquidation/i.test(String(s.keyChange || "")));
   let liquidationTotalUsd = 0;
   let liquidationCountWithAmount = 0;
-  for (const s of liquidationSignals) {
-    const text = `${s.keyChange || ""} ${s.title || ""}`;
-    const amount = parseUsdAmount(text);
-    if (amount === null) continue;
-    liquidationTotalUsd += Math.abs(amount);
-    liquidationCountWithAmount += 1;
+  if (metrics7d && Number.isFinite(metrics7d.liquidationTotalUsd) && Number.isFinite(metrics7d.liquidationCountWithAmount)) {
+    liquidationTotalUsd = Number(metrics7d.liquidationTotalUsd);
+    liquidationCountWithAmount = Number(metrics7d.liquidationCountWithAmount);
+  } else {
+    const liquidationSignals = recentSignals.filter((s) => {
+      const blob = `${s.title || ""} ${s.keyChange || ""} ${s.zhTitle || ""}`;
+      return /清算|liquidation/i.test(blob);
+    });
+    for (const s of liquidationSignals) {
+      const text = `${s.keyChange || ""} ${s.title || ""} ${s.zhTitle || ""}`;
+      // 防呆：只接受「清算/ liquidation」在金額之前的描述，且至少 $1M
+      const m = text.match(/(?:liquidat(?:ion|ed)?|清算)[^$]{0,80}\$\s*([\d,.]+)\s*([kKmMbB])?/i);
+      if (!m) continue;
+      const n = Number(String(m[1]).replace(/,/g, ""));
+      if (!Number.isFinite(n)) continue;
+      const unit = String(m[2] || "").toUpperCase();
+      const amount = unit === "K" ? n * 1e3 : unit === "M" ? n * 1e6 : unit === "B" ? n * 1e9 : n;
+      if (!Number.isFinite(amount) || amount < 1e6) continue;
+      liquidationTotalUsd += Math.abs(amount);
+      liquidationCountWithAmount += 1;
+    }
   }
   const liquidationText = liquidationCountWithAmount > 0
     ? `$${Math.round(liquidationTotalUsd / 1e6).toLocaleString()}M`
