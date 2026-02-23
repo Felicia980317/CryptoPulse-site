@@ -95,6 +95,10 @@ h2 { margin-bottom: 12px; }
   margin-top: 8px;
 }
 
+.kv > div + div {
+  margin-top: 2px;
+}
+
 .table-wrap {
   border: 1px solid var(--border);
   border-radius: 10px;

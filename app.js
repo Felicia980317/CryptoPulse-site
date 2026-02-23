@@ -251,7 +251,7 @@ function renderOverview(data) {
   const cards = [
     {
       title: "短線/長線總趨勢（模型評估）",
-      valueHtml: `短線：${biasSpan(overview.shortTermTrend || "震盪")}｜長線：${biasSpan(overview.longTermTrend || "震盪")}`,
+      valueHtml: `短線（1-7天）：${biasSpan(overview.shortTermTrend || "震盪")}｜長線（1-3個月）：${biasSpan(overview.longTermTrend || "震盪")}`,
       subLines: [
         `短線依據：${overview.shortTrendReason || `幣圈偏多 ${trendBasis.bullishSignals ?? 0} / 偏空 ${trendBasis.bearishSignals ?? 0}；外部風險偏多 ${trendBasis.riskBull ?? 0} / 偏空 ${trendBasis.riskBear ?? 0}`}`,
         `長線依據：${overview.longTrendReason || "依宏觀與風險結構推估"}`,
@@ -261,33 +261,46 @@ function renderOverview(data) {
     {
       title: rateCutOutlook.mode === "concrete" ? "降息機率（市場隱含）" : "降息機率（模型估算）",
       valueHtml: probabilitySpan(rateCutOutlook.probability),
-      sub: rateCutOutlook.mode === "concrete"
-        ? `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）｜${rateCutOutlook.basis}｜來源：${rateCutOutlook.sourceName}${rateCutOutlook.firstLikelyCutMonth ? `｜首次達 50% 月份：${rateCutOutlook.firstLikelyCutMonth}（${Math.round(rateCutOutlook.firstLikelyCutProbability || 0)}%）` : ""}`
-        : `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）｜依據：${rateCutOutlook.basis || "FOMC/CPI/NFP/外部風險"}｜模型評估（非官方機率）`,
+      subLines: rateCutOutlook.mode === "concrete"
+        ? [
+          `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）`,
+          `${rateCutOutlook.basis}`,
+          `來源：${rateCutOutlook.sourceName}${rateCutOutlook.firstLikelyCutMonth ? `；首次達 50% 月份：${rateCutOutlook.firstLikelyCutMonth}（${Math.round(rateCutOutlook.firstLikelyCutProbability || 0)}%）` : ""}`
+        ]
+        : [
+          `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）`,
+          `依據：${rateCutOutlook.basis || "FOMC/CPI/NFP/外部風險"}`,
+          "模型評估（非官方機率）"
+        ],
       targetId: "macro-section"
     },
     {
       title: "下一個高影響事件",
       valueHtml: nextEventText,
-      sub: nextHigh?.result?.cryptoImpact || "重點看事件前後 1-2 小時波動",
+      subLines: [nextHigh?.result?.cryptoImpact || "重點看事件前後 1-2 小時波動"],
       targetId: "macro-section"
     },
     {
       title: "高風險重點",
       valueHtml: highRisk ? stripHtml(highRisk.keyChange || highRisk.zhTitle || highRisk.title) : "目前無高風險訊號",
-      sub: highRisk ? `短線：${stripHtml(highRisk.shortTermBias || "震盪")}` : "",
+      subLines: highRisk ? [`短線：${stripHtml(highRisk.shortTermBias || "震盪")}`] : [],
       targetId: "crypto-section"
     },
     {
       title: "外部風險重點",
       valueHtml: latestExternalText,
-      sub: latestExternal ? `時間：${latestExternalTimeText}｜方向：${stripHtml(latestExternal.shortTermBias || "震盪")}` : "",
+      subLines: latestExternal
+        ? [
+          `時間：${latestExternalTimeText}`,
+          `方向：${stripHtml(latestExternal.shortTermBias || "震盪")}`
+        ]
+        : [],
       targetId: "risk-section"
     },
     {
       title: "巨鯨風向",
       valueHtml: biasSpan(whale.trend || "中性"),
-      sub: whale.summary || "無足夠資料",
+      subLines: [whale.summary || "無足夠資料"],
       targetId: "whale-section"
     }
   ];
@@ -301,9 +314,12 @@ function renderOverview(data) {
     const valueHtml = item.targetId
       ? `<a class="overview-link metric metric-link" href="#${item.targetId}">${item.valueHtml}</a>`
       : `<div class="metric">${item.valueHtml}</div>`;
-    const subHtml = item.subLines?.length
-      ? `<div class="kv">${item.subLines.map((line) => `<div>${colorizeBiasWords(line)}</div>`).join("")}</div>`
-      : (item.sub ? `<div class="kv">${colorizeBiasWords(item.sub)}</div>` : "");
+    const normalizedSubLines = Array.isArray(item.subLines)
+      ? item.subLines.filter(Boolean)
+      : (item.sub ? String(item.sub).split("｜").map((part) => part.trim()).filter(Boolean) : []);
+    const subHtml = normalizedSubLines.length
+      ? `<div class="kv">${normalizedSubLines.map((line) => `<div>${colorizeBiasWords(line)}</div>`).join("")}</div>`
+      : "";
     card.innerHTML = `${titleHtml}${valueHtml}${subHtml}`;
     root.appendChild(card);
   });
