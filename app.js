@@ -252,7 +252,11 @@ function renderOverview(data) {
     {
       title: "短線/長線總趨勢（模型評估）",
       valueHtml: `短線：${biasSpan(overview.shortTermTrend || "震盪")}｜長線：${biasSpan(overview.longTermTrend || "震盪")}`,
-      sub: `短線依據：${overview.shortTrendReason || `幣圈偏多 ${trendBasis.bullishSignals ?? 0} / 偏空 ${trendBasis.bearishSignals ?? 0}；外部風險偏多 ${trendBasis.riskBull ?? 0} / 偏空 ${trendBasis.riskBear ?? 0}`}｜長線依據：${overview.longTrendReason || "依宏觀與風險結構推估"}｜模型：${overview.trendModelMeta?.mode || "fallback"}/${overview.trendModelMeta?.model || "rule-based"}`
+      subLines: [
+        `短線依據：${overview.shortTrendReason || `幣圈偏多 ${trendBasis.bullishSignals ?? 0} / 偏空 ${trendBasis.bearishSignals ?? 0}；外部風險偏多 ${trendBasis.riskBull ?? 0} / 偏空 ${trendBasis.riskBear ?? 0}`}`,
+        `長線依據：${overview.longTrendReason || "依宏觀與風險結構推估"}`,
+        `模型：${overview.trendModelMeta?.mode || "fallback"}/${overview.trendModelMeta?.model || "rule-based"}`
+      ]
     },
     {
       title: rateCutOutlook.mode === "concrete" ? "降息機率（市場隱含）" : "降息機率（模型估算）",
@@ -297,7 +301,9 @@ function renderOverview(data) {
     const valueHtml = item.targetId
       ? `<a class="overview-link metric metric-link" href="#${item.targetId}">${item.valueHtml}</a>`
       : `<div class="metric">${item.valueHtml}</div>`;
-    const subHtml = item.sub ? `<div class="kv">${colorizeBiasWords(item.sub)}</div>` : "";
+    const subHtml = item.subLines?.length
+      ? `<div class="kv">${item.subLines.map((line) => `<div>${colorizeBiasWords(line)}</div>`).join("")}</div>`
+      : (item.sub ? `<div class="kv">${colorizeBiasWords(item.sub)}</div>` : "");
     card.innerHTML = `${titleHtml}${valueHtml}${subHtml}`;
     root.appendChild(card);
   });
