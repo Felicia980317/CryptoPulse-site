@@ -246,19 +246,53 @@ function renderOverallTrend(data) {
       .trim();
   }
 
+  function colorizeMultiline(text = "") {
+    const parts = String(text)
+      .split(/\n+/g)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parts.length === 0) return "";
+    return parts.map((p) => colorizeBiasWords(p)).join("<br>");
+  }
+
+  function parseReasonSections(text = "") {
+    const rawLines = reasonLines(text).map(normalizeReasonLine).filter(Boolean);
+    const keys = ["主因", "傳導", "風險情境", "觀察指標", "失效條件"];
+    const sections = Object.fromEntries(keys.map((k) => [k, ""]));
+
+    let currentKey = "";
+    for (const line of rawLines) {
+      const m = line.match(/^(主因|傳導|風險情境|觀察指標|失效條件)\s*[:：]\s*(.*)$/);
+      if (m) {
+        currentKey = m[1];
+        sections[currentKey] = (m[2] || "").trim();
+        continue;
+      }
+      if (currentKey) {
+        sections[currentKey] = sections[currentKey]
+          ? `${sections[currentKey]}\n${line}`
+          : line;
+      }
+    }
+
+    return { keys, sections, rawLines };
+  }
+
   function renderBlock({ title, horizon, trend, condition, reason }) {
     const hasCondition = Boolean(stripHtml(condition));
     const trendText = hasCondition && /偏漲|偏多|上漲|多頭/.test(String(trend))
       ? `${trend}（有條件）`
       : String(trend);
-    const lines = reasonLines(reason);
-    const requiredKeys = ["主因", "傳導", "風險情境", "觀察指標", "失效條件"];
-    let displayLines = lines.map(normalizeReasonLine).filter(Boolean);
-    if (displayLines.length === 0) {
-      displayLines = requiredKeys.map((key) => `${key}：未提供`);
-    }
+    const parsed = parseReasonSections(reason);
+    const keys = parsed.keys;
+    const sections = parsed.sections;
 
-    const conditionLine = hasCondition ? `<div><strong>附帶條件：</strong>${colorizeBiasWords(condition)}</div>` : "";
+    const hasAnySection = keys.some((k) => Boolean(String(sections[k] || "").trim()));
+    const fallbackText = hasAnySection ? "" : (parsed.rawLines.join("\n") || "");
+
+    const conditionLine = hasCondition
+      ? `<div class="reason-row"><div class="reason-key">附帶條件</div><div class="reason-val">${colorizeBiasWords(condition)}</div></div>`
+      : "";
     return `
       <div class="trend-block">
         <div class="trend-block-head">
@@ -266,9 +300,17 @@ function renderOverallTrend(data) {
           <div class="trend-block-horizon">${horizon}</div>
           <div class="trend-block-value">${biasSpan(trendText)}</div>
         </div>
-        <div class="kv">
+        <div class="kv reason-kv">
           ${conditionLine}
-          ${displayLines.map((line) => `<div>${colorizeBiasWords(line)}</div>`).join("")}
+          ${hasAnySection
+            ? keys.map((k) => `
+              <div class="reason-row">
+                <div class="reason-key">${k}</div>
+                <div class="reason-val">${colorizeMultiline(String(sections[k] || "").trim() || "—")}</div>
+              </div>
+            `).join("")
+            : `<div class="reason-row"><div class="reason-key">說明</div><div class="reason-val">${colorizeMultiline(fallbackText || "—")}</div></div>`
+          }
         </div>
       </div>
     `;

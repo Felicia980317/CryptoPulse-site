@@ -155,6 +155,34 @@ h2 { margin-bottom: 12px; }
   margin-top: 8px;
 }
 
+.reason-kv {
+  margin-top: 8px;
+}
+
+.reason-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.reason-row + .reason-row {
+  margin-top: 6px;
+}
+
+.reason-key {
+  color: var(--text);
+  opacity: 0.85;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reason-val {
+  color: var(--muted);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 .kv > div + div {
   margin-top: 2px;
 }
