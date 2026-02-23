@@ -162,6 +162,24 @@ td.analysis {
   font-weight: 700;
 }
 
+.bias-muted {
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.overview-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.overview-link:hover {
+  text-decoration: underline;
+}
+
+.metric-link {
+  display: block;
+}
+
 .whale-list {
   margin: 10px 0 0;
   padding-left: 18px;

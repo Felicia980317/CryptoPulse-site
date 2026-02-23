@@ -34,6 +34,7 @@ function stripHtml(text = "") {
 
 function biasClass(text = "") {
   const t = String(text);
+  if (/待確認|待公布|待判讀|判讀中/i.test(t)) return "bias-muted";
   if (/偏漲|偏多|上漲|多頭|\bup\b/i.test(t)) return "bias-up";
   if (/偏跌|偏空|下跌|空頭|\bdown\b/i.test(t)) return "bias-down";
   return "bias-side";
@@ -45,9 +46,77 @@ function biasSpan(text = "") {
 
 function colorizeBiasWords(text = "") {
   return stripHtml(text)
+    .replace(/待公布後判讀|待公布|待確認|待判讀|判讀中/g, '<span class="bias-muted">$&</span>')
     .replace(/偏漲|偏多|上漲|多頭/g, '<span class="bias-up">$&</span>')
     .replace(/偏跌|偏空|下跌|空頭/g, '<span class="bias-down">$&</span>')
     .replace(/震盪/g, '<span class="bias-side">$&</span>');
+}
+
+function toNumber(value) {
+  const num = Number(String(value ?? "").replace(/[^\d.+-]/g, ""));
+  return Number.isFinite(num) ? num : null;
+}
+
+function buildRateCutOutlook(data) {
+  const macroEvents = data.macroEvents || [];
+
+  const upcomingFomc = macroEvents
+    .filter((event) => event.country === "US" && event.eventType === "central-bank" && event.status === "upcoming")
+    .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))[0] || null;
+
+  const recentFomc = macroEvents
+    .filter((event) => event.country === "US" && event.eventType === "central-bank" && event.status === "recent")
+    .sort((a, b) => new Date(b.datetime) - new Date(a.datetime))[0] || null;
+
+  const recentCpi = macroEvents
+    .filter((event) => event.eventType === "cpi" && event.status === "recent")
+    .sort((a, b) => new Date(b.datetime) - new Date(a.datetime))[0] || null;
+
+  const recentNfp = macroEvents
+    .filter((event) => event.eventType === "nfp" && event.status === "recent")
+    .sort((a, b) => new Date(b.datetime) - new Date(a.datetime))[0] || null;
+
+  let score = 45;
+
+  const recentRate = toNumber(recentFomc?.result?.actual);
+  const previousRate = toNumber(recentFomc?.result?.previous);
+  if (recentRate !== null && previousRate !== null) {
+    if (recentRate < previousRate) score += 15;
+    if (recentRate > previousRate) score -= 15;
+  }
+
+  if (recentCpi?.result?.shortTermBias === "偏漲") score += 10;
+  if (recentCpi?.result?.shortTermBias === "偏跌") score -= 10;
+
+  if (recentNfp?.result?.shortTermBias === "偏漲") score += 10;
+  if (recentNfp?.result?.shortTermBias === "偏跌") score -= 10;
+
+  const riskBear = (data.globalRiskSignals || []).filter((signal) => signal.shortTermBias === "偏跌").length;
+  const riskBull = (data.globalRiskSignals || []).filter((signal) => signal.shortTermBias === "偏漲").length;
+  if (riskBear > riskBull) score -= 5;
+  if (riskBull > riskBear) score += 5;
+
+  const probability = Math.max(5, Math.min(95, score));
+
+  if (!upcomingFomc?.datetime) {
+    return {
+      probability,
+      monthLabel: "待定",
+      eventTitle: "下一次 FOMC"
+    };
+  }
+
+  const nextDate = new Date(upcomingFomc.datetime);
+  return {
+    probability,
+    monthLabel: `${nextDate.getFullYear()}年${nextDate.getMonth() + 1}月`,
+    eventTitle: upcomingFomc.title
+  };
+}
+
+function probabilitySpan(probability) {
+  const cls = probability >= 60 ? "bias-up" : probability <= 40 ? "bias-down" : "bias-side";
+  return `<span class="${cls}">${probability}%</span>`;
 }
 
 function translateRiskText(text = "") {
@@ -129,6 +198,7 @@ function renderOverview(data) {
   const overview = data.marketOverview || {};
   const whale = data.whaleTrend || {};
   const nextHigh = overview.nextHighImpact;
+  const rateCutOutlook = buildRateCutOutlook(data);
 
   const highRisk = (data.cryptoSignals || [])
     .filter((signal) => signal.impact === "high")
@@ -140,6 +210,7 @@ function renderOverview(data) {
   const latestExternalText = latestExternal
     ? translateRiskText(latestExternal.keyChange || latestExternal.title)
     : "目前外部風險訊號偏少";
+  const latestExternalTimeText = latestExternal?.time ? fmt.format(new Date(latestExternal.time)) : "未知";
 
   const nextEventText = nextHigh?.datetime
     ? `${fmt.format(new Date(nextHigh.datetime))} ${nextHigh.title}`
@@ -152,32 +223,48 @@ function renderOverview(data) {
       sub: "整合宏觀、外部風險、幣圈訊號"
     },
     {
+      title: "降息機率",
+      valueHtml: probabilitySpan(rateCutOutlook.probability),
+      sub: `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）`,
+      targetId: "macro-section"
+    },
+    {
       title: "下一個高影響事件",
       valueHtml: nextEventText,
-      sub: nextHigh?.result?.cryptoImpact || "重點看事件前後 1-2 小時波動"
+      sub: nextHigh?.result?.cryptoImpact || "重點看事件前後 1-2 小時波動",
+      targetId: "macro-section"
     },
     {
       title: "高風險重點",
       valueHtml: highRisk ? stripHtml(highRisk.keyChange || highRisk.zhTitle || highRisk.title) : "目前無高風險訊號",
-      sub: highRisk ? `短線：${stripHtml(highRisk.shortTermBias || "震盪")}` : ""
+      sub: highRisk ? `短線：${stripHtml(highRisk.shortTermBias || "震盪")}` : "",
+      targetId: "crypto-section"
     },
     {
       title: "外部風險重點",
       valueHtml: latestExternalText,
-      sub: latestExternal ? `方向：${stripHtml(latestExternal.shortTermBias || "震盪")}` : ""
+      sub: latestExternal ? `時間：${latestExternalTimeText}｜方向：${stripHtml(latestExternal.shortTermBias || "震盪")}` : "",
+      targetId: "risk-section"
     },
     {
       title: "巨鯨風向",
       valueHtml: biasSpan(whale.trend || "中性"),
-      sub: whale.summary || "無足夠資料"
+      sub: whale.summary || "無足夠資料",
+      targetId: "whale-section"
     }
   ];
 
   cards.forEach((item) => {
     const card = document.createElement("article");
     card.className = "card";
+    const titleHtml = item.targetId
+      ? `<h3><a class="overview-link" href="#${item.targetId}">${item.title}</a></h3>`
+      : `<h3>${item.title}</h3>`;
+    const valueHtml = item.targetId
+      ? `<a class="overview-link metric metric-link" href="#${item.targetId}">${item.valueHtml}</a>`
+      : `<div class="metric">${item.valueHtml}</div>`;
     const subHtml = item.sub ? `<div class="kv">${colorizeBiasWords(item.sub)}</div>` : "";
-    card.innerHTML = `<h3>${item.title}</h3><div class="metric">${item.valueHtml}</div>${subHtml}`;
+    card.innerHTML = `${titleHtml}${valueHtml}${subHtml}`;
     root.appendChild(card);
   });
 }
@@ -239,7 +326,7 @@ function renderMacro(data) {
 
     const impactLine = hasPublished
       ? `對幣市：${event.result?.cryptoImpact || "等待補充"}｜短線：${biasSpan(event.result?.shortTermBias || "震盪")}`
-      : `對幣市：待公布後判讀｜短線：${biasSpan("待確認")}`;
+      : `<span class="bias-muted">對幣市：待公布後判讀｜短線：待確認</span>`;
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
