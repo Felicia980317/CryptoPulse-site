@@ -377,6 +377,7 @@ function renderSignals(data) {
 
   let signals = data.cryptoSignals || [];
   if (onlyHighImpact) signals = signals.filter((signal) => signal.impact === "high");
+  signals = [...signals].sort((a, b) => new Date(b.time) - new Date(a.time));
 
   signals.forEach((signal) => {
     const summary = stripHtml(signal.zhSummary || signal.summary || "");
@@ -427,7 +428,9 @@ function renderGlobalRisks(data) {
   const root = document.getElementById("global-risks");
   root.innerHTML = "";
 
-  const risks = (data.globalRiskSignals || []).slice(0, 8);
+  const risks = [...(data.globalRiskSignals || [])]
+    .sort((a, b) => new Date(b.time) - new Date(a.time))
+    .slice(0, 8);
   if (risks.length === 0) {
     const card = document.createElement("article");
     card.className = "card";
