@@ -60,6 +60,47 @@ h2 { margin-bottom: 12px; }
   background: rgba(2, 6, 23, 0.45);
 }
 
+.trend-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 960px) {
+  .trend-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.trend-block {
+  padding: 10px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.trend-block-head {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.trend-block-title {
+  font-weight: 700;
+}
+
+.trend-block-horizon {
+  opacity: 0.85;
+  font-size: 12px;
+}
+
+.trend-block-value {
+  text-align: right;
+}
+
 .controls {
   display: flex;
   gap: 12px;

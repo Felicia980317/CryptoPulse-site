@@ -223,23 +223,90 @@ function renderOverallTrend(data) {
   const shortReason = overview.shortTrendReason || "短線理由尚未生成";
   const midReason = overview.midTrendReason || "中線理由尚未生成";
   const longReason = overview.longTrendReason || "長線理由尚未生成";
+  const shortCond = overview.shortTermCondition || "";
+  const midCond = overview.midTermCondition || "";
+  const longCond = overview.longTermCondition || "";
   const external = overview.externalRiskBias || "外部風險中性";
-  const model = `${overview.trendModelMeta?.mode || "fallback"}/${overview.trendModelMeta?.model || "rule-based"}`;
+  const mode = overview.trendModelMeta?.mode || "fallback";
+  const model = `${mode}/${overview.trendModelMeta?.model || "rule-based"}`;
+  const title = mode === "manual_trader" ? "短/中/長線總趨勢（交易員判斷）" : "短/中/長線總趨勢（模型評估）";
+
+  function reasonLines(text = "") {
+    const raw = stripHtml(text);
+    return raw
+      .split(/\r?\n|；|;|\|\|/g)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+
+  function normalizeReasonLine(line = "") {
+    return String(line)
+      .replace(/^\uFEFF/, "")
+      .replace(/^[\s\-•\u2022]+/, "")
+      .trim();
+  }
+
+  function renderBlock({ title, horizon, trend, condition, reason }) {
+    const hasCondition = Boolean(stripHtml(condition));
+    const trendText = hasCondition && /偏漲|偏多|上漲|多頭/.test(String(trend))
+      ? `${trend}（有條件）`
+      : String(trend);
+    const lines = reasonLines(reason);
+    const requiredKeys = ["主因", "傳導", "風險情境", "觀察指標", "失效條件"];
+    const isTemplateLike = requiredKeys.every((key) =>
+      lines.some((line) => new RegExp(`^${key}\s*[:：]`).test(normalizeReasonLine(line)))
+    );
+
+    let displayLines = lines.map(normalizeReasonLine);
+    if (displayLines.length === 0) {
+      displayLines = ["主因：未提供", "傳導：未提供", "風險情境：未提供", "觀察指標：未提供", "失效條件：未提供"];
+    } else if (!isTemplateLike) {
+      const missing = requiredKeys.filter((key) => !displayLines.some((line) => new RegExp(`^${key}\s*[:：]`).test(line)));
+      displayLines = [...displayLines, ...missing.map((key) => `${key}：未提供`)];
+    }
+
+    const conditionLine = hasCondition ? `<div><strong>附帶條件：</strong>${colorizeBiasWords(condition)}</div>` : "";
+    return `
+      <div class="trend-block">
+        <div class="trend-block-head">
+          <div class="trend-block-title">${title}</div>
+          <div class="trend-block-horizon">${horizon}</div>
+          <div class="trend-block-value">${biasSpan(trendText)}</div>
+        </div>
+        <div class="kv">
+          ${conditionLine}
+          ${displayLines.map((line) => `<div>${colorizeBiasWords(line)}</div>`).join("")}
+        </div>
+      </div>
+    `;
+  }
 
   el.innerHTML = `
-    <h3>短/中/長線總趨勢（模型評估）</h3>
-    <div class="trend-badges">
-      <div>短線（1-7天）：${biasSpan(short)}</div>
-      <div>中線（2-6週）：${biasSpan(mid)}</div>
-      <div>長線（1-3個月）：${biasSpan(long)}</div>
+    <h3>${title}</h3>
+    <div class="trend-grid">
+      ${renderBlock({
+        title: "短線",
+        horizon: "1-7天",
+        trend: short,
+        condition: shortCond,
+        reason: shortReason
+      })}
+      ${renderBlock({
+        title: "中線",
+        horizon: "2-6週",
+        trend: mid,
+        condition: midCond,
+        reason: midReason
+      })}
+      ${renderBlock({
+        title: "長線",
+        horizon: "1-3個月",
+        trend: long,
+        condition: longCond,
+        reason: longReason
+      })}
     </div>
-    <div class="kv">
-      <div><strong>短線判斷：</strong>${colorizeBiasWords(shortReason)}</div>
-      <div><strong>中線判斷：</strong>${colorizeBiasWords(midReason)}</div>
-      <div><strong>長線判斷：</strong>${colorizeBiasWords(longReason)}</div>
-      <div><strong>外部風險：</strong>${biasSpan(external)}</div>
-      <div><strong>模型：</strong>${model}</div>
-    </div>
+    <div class="kv"><div><strong>外部風險：</strong>${biasSpan(external)}</div><div><strong>模型：</strong>${model}</div></div>
   `;
 }
 
