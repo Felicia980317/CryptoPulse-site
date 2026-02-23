@@ -51,11 +51,9 @@ function colorizeBiasWords(text = "") {
 }
 
 async function loadData() {
-  const upstashResponse = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(UPSTASH_KEY)}`, {
-    headers: {
-      Authorization: `Bearer ${UPSTASH_READ_TOKEN}`
-    }
-  });
+  const upstashResponse = await fetch(
+    `${UPSTASH_URL}/get/${encodeURIComponent(UPSTASH_KEY)}?token=${encodeURIComponent(UPSTASH_READ_TOKEN)}`
+  );
 
   if (!upstashResponse.ok) {
     throw new Error("無法從 Upstash 載入最新資料");
