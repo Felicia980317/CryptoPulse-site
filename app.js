@@ -32,6 +32,11 @@ function stripHtml(text = "") {
   return String(text).replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 }
 
+function toTimestamp(value) {
+  const t = new Date(value).getTime();
+  return Number.isFinite(t) ? t : -1;
+}
+
 function biasClass(text = "") {
   const t = String(text);
   if (/待確認|待公布|待判讀|判讀中/i.test(t)) return "bias-muted";
@@ -377,7 +382,7 @@ function renderSignals(data) {
 
   let signals = data.cryptoSignals || [];
   if (onlyHighImpact) signals = signals.filter((signal) => signal.impact === "high");
-  signals = [...signals].sort((a, b) => new Date(b.time) - new Date(a.time));
+  signals = [...signals].sort((a, b) => toTimestamp(b.time) - toTimestamp(a.time));
 
   signals.forEach((signal) => {
     const summary = stripHtml(signal.zhSummary || signal.summary || "");
@@ -429,7 +434,7 @@ function renderGlobalRisks(data) {
   root.innerHTML = "";
 
   const risks = [...(data.globalRiskSignals || [])]
-    .sort((a, b) => new Date(b.time) - new Date(a.time))
+    .sort((a, b) => toTimestamp(b.time) - toTimestamp(a.time))
     .slice(0, 8);
   if (risks.length === 0) {
     const card = document.createElement("article");
