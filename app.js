@@ -120,11 +120,11 @@ function buildRateCutOutlook(data) {
 
   if (!upcomingFomc?.datetime) {
     return {
-      mode: "model",
+      mode: "estimate",
       probability,
       monthLabel: "待定",
       eventTitle: "下一次 FOMC",
-      basis: "模型：FOMC/CPI/NFP/外部風險"
+      basis: "估算依據：FOMC/CPI/NFP/外部風險"
     };
   }
 
@@ -137,7 +137,7 @@ function buildRateCutOutlook(data) {
   ].join(" / ");
 
   return {
-    mode: "model",
+    mode: "estimate",
     probability,
     monthLabel: `${nextDate.getFullYear()}年${nextDate.getMonth() + 1}月`,
     eventTitle: upcomingFomc.title,
@@ -433,7 +433,7 @@ function renderOverallTrend(data) {
         reason: longReason
       })}
     </div>
-    <div class="kv"><div><strong>外部風險：</strong>${biasSpan(external)}</div><div><strong>模型：</strong>${model}</div></div>
+    <div class="kv"><div><strong>外部風險：</strong>${biasSpan(external)}</div></div>
   `;
 }
 
