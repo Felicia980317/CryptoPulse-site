@@ -50,6 +50,41 @@ function colorizeBiasWords(text = "") {
     .replace(/震盪/g, '<span class="bias-side">$&</span>');
 }
 
+function translateRiskText(text = "") {
+  const clean = stripHtml(text)
+    .replace(/\s+-\s+[^-]+$/g, "")
+    .trim();
+
+  if (/Supreme Court.*reversal.*Trump.*tariff.*clarity/i.test(clean)) {
+    return "美國最高法院推翻川普關稅措施，可能讓政策方向更明確";
+  }
+
+  let translated = clean;
+  const replacements = [
+    [/Supreme Court/gi, "美國最高法院"],
+    [/Trump(?:'s)?/gi, "川普"],
+    [/tariffs?/gi, "關稅"],
+    [/reversal/gi, "推翻"],
+    [/could bring/gi, "可能帶來"],
+    [/clarity/gi, "更明確方向"],
+    [/policy/gi, "政策"],
+    [/trade/gi, "貿易"],
+    [/war/gi, "戰爭"],
+    [/sanctions?/gi, "制裁"],
+    [/interest rates?/gi, "利率"],
+    [/Fed/gi, "聯準會"],
+    [/FOMC/gi, "FOMC"],
+    [/BOJ/gi, "日本央行"],
+    [/crypto/gi, "加密市場"]
+  ];
+
+  for (const [pattern, replacement] of replacements) {
+    translated = translated.replace(pattern, replacement);
+  }
+
+  return translated;
+}
+
 async function loadData() {
   const upstashResponse = await fetch(`${UPSTASH_URL}/get/${UPSTASH_KEY}`, {
     headers: {
@@ -102,6 +137,10 @@ function renderOverview(data) {
   const latestExternal = (data.globalRiskSignals || [])
     .sort((a, b) => new Date(b.time) - new Date(a.time))[0] || null;
 
+  const latestExternalText = latestExternal
+    ? translateRiskText(latestExternal.keyChange || latestExternal.title)
+    : "目前外部風險訊號偏少";
+
   const nextEventText = nextHigh?.datetime
     ? `${fmt.format(new Date(nextHigh.datetime))} ${nextHigh.title}`
     : "未來 7 天暫無高影響事件";
@@ -124,7 +163,7 @@ function renderOverview(data) {
     },
     {
       title: "外部風險重點",
-      valueHtml: latestExternal ? stripHtml(latestExternal.keyChange || latestExternal.title) : "目前外部風險訊號偏少",
+      valueHtml: latestExternalText,
       sub: latestExternal ? `方向：${stripHtml(latestExternal.shortTermBias || "震盪")}` : ""
     },
     {
@@ -278,12 +317,13 @@ function renderGlobalRisks(data) {
   }
 
   risks.forEach((risk) => {
+    const translatedChange = translateRiskText(risk.keyChange || risk.title);
     const card = document.createElement("article");
     card.className = "card";
     card.innerHTML = `
       <h3><a href="${risk.source}" target="_blank" rel="noreferrer">${risk.title}</a></h3>
       <div>${fmt.format(new Date(risk.time))}</div>
-      <p class="change"><strong>具體變化：</strong>${stripHtml(risk.keyChange)}</p>
+      <p class="change"><strong>具體變化：</strong>${translatedChange}</p>
       <p class="impact"><strong>對虛擬幣影響：</strong>${stripHtml(risk.cryptoImpact)}</p>
       <p class="analysis-note"><strong>短期方向：</strong>${biasSpan(stripHtml(risk.shortTermBias || "震盪"))}</p>
     `;
