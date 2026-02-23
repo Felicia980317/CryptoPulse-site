@@ -657,7 +657,7 @@ function renderOverview(data) {
     {
       title: "槓桿清算規模（7D，訊號整合）",
       valueHtml: liquidationCountWithAmount > 0
-        ? `<span class="${liquidationTotalUsd >= 200e6 ? "bias-down" : liquidationTotalUsd >= 80e6 ? "bias-side" : "bias-up"}">$${Math.round(liquidationTotalUsd / 1e6).toLocaleString()}M</span>`
+        ? `<span class="${liquidationTotalUsd >= 200e6 ? "bias-down" : liquidationTotalUsd >= 80e6 ? "bias-side" : "bias-muted"}">$${Math.round(liquidationTotalUsd / 1e6).toLocaleString()}M</span>`
         : "—",
       subLines: [liquidationCountWithAmount > 0 ? "近 7 日清算彙總（以可解析金額訊號估算）" : "近 7 日未抓到可解析金額的清算訊號"],
       targetId: "crypto-section"
