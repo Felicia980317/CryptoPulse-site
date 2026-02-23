@@ -41,6 +41,25 @@ h2 { margin-bottom: 12px; }
   color: #e2e8f0;
 }
 
+.trend-banner h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.trend-badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.trend-badges > div {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(2, 6, 23, 0.45);
+}
+
 .controls {
   display: flex;
   gap: 12px;

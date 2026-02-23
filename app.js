@@ -217,12 +217,30 @@ function renderMeta(data) {
 function renderOverallTrend(data) {
   const el = document.getElementById("overall-trend");
   const overview = data.marketOverview || {};
-  const summary = overview.overallSummary || "目前市場趨勢資料整理中。";
   const short = overview.shortTermTrend || "待AI評估";
   const mid = overview.midTermTrend || "待AI評估";
   const long = overview.longTermTrend || "待AI評估";
+  const shortReason = overview.shortTrendReason || "短線理由尚未生成";
+  const midReason = overview.midTrendReason || "中線理由尚未生成";
+  const longReason = overview.longTrendReason || "長線理由尚未生成";
   const external = overview.externalRiskBias || "外部風險中性";
-  el.innerHTML = `<strong>整體趨勢：</strong>${colorizeBiasWords(summary)}<br><strong>短/中/長：</strong>短線（1-7天）${biasSpan(short)} / 中線（2-6週）${biasSpan(mid)} / 長線（1-3個月）${biasSpan(long)}<br><strong>外部風險：</strong>${biasSpan(external)}`;
+  const model = `${overview.trendModelMeta?.mode || "fallback"}/${overview.trendModelMeta?.model || "rule-based"}`;
+
+  el.innerHTML = `
+    <h3>短/中/長線總趨勢（模型評估）</h3>
+    <div class="trend-badges">
+      <div>短線（1-7天）：${biasSpan(short)}</div>
+      <div>中線（2-6週）：${biasSpan(mid)}</div>
+      <div>長線（1-3個月）：${biasSpan(long)}</div>
+    </div>
+    <div class="kv">
+      <div><strong>短線判斷：</strong>${colorizeBiasWords(shortReason)}</div>
+      <div><strong>中線判斷：</strong>${colorizeBiasWords(midReason)}</div>
+      <div><strong>長線判斷：</strong>${colorizeBiasWords(longReason)}</div>
+      <div><strong>外部風險：</strong>${biasSpan(external)}</div>
+      <div><strong>模型：</strong>${model}</div>
+    </div>
+  `;
 }
 
 function renderOverview(data) {
@@ -230,7 +248,6 @@ function renderOverview(data) {
   root.innerHTML = "";
 
   const overview = data.marketOverview || {};
-  const trendBasis = overview.shortTrendBasis || {};
   const whale = data.whaleTrend || {};
   const nextHigh = overview.nextHighImpact;
   const rateCutOutlook = buildRateCutOutlook(data);
@@ -252,16 +269,6 @@ function renderOverview(data) {
     : "未來 7 天暫無高影響事件";
 
   const cards = [
-    {
-      title: "短/中/長線總趨勢（模型評估）",
-      valueHtml: `短線（1-7天）：${biasSpan(overview.shortTermTrend || "震盪")}｜中線（2-6週）：${biasSpan(overview.midTermTrend || "震盪")}｜長線（1-3個月）：${biasSpan(overview.longTermTrend || "震盪")}`,
-      subLines: [
-        `短線依據：${overview.shortTrendReason || `幣圈偏多 ${trendBasis.bullishSignals ?? 0} / 偏空 ${trendBasis.bearishSignals ?? 0}；外部風險偏多 ${trendBasis.riskBull ?? 0} / 偏空 ${trendBasis.riskBear ?? 0}`}`,
-        `中線依據：${overview.midTrendReason || "依近 2-6 週宏觀與風險結構推估"}`,
-        `長線依據：${overview.longTrendReason || "依宏觀與風險結構推估"}`,
-        `模型：${overview.trendModelMeta?.mode || "fallback"}/${overview.trendModelMeta?.model || "rule-based"}`
-      ]
-    },
     {
       title: rateCutOutlook.mode === "concrete" ? "降息機率（市場隱含）" : "降息機率（模型估算）",
       valueHtml: probabilitySpan(rateCutOutlook.probability),
