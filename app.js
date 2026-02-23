@@ -384,6 +384,9 @@ function renderSignals(data) {
     const analysisText = stripHtml(signal.cryptoAnalysis || "等待更多資料補充分析");
     const changeText = stripHtml(signal.keyChange || "關鍵變化整理中");
     const shortBias = stripHtml(signal.shortTermBias || "震盪");
+    const mergedHint = Number(signal.mergedCount || 1) > 1
+      ? `<p class="kv">已整合同類訊息 ${signal.mergedCount} 則</p>`
+      : "";
 
     const card = document.createElement("article");
     card.className = "card";
@@ -395,6 +398,7 @@ function renderSignals(data) {
       <p>${summary}</p>
       <p class="impact"><strong>對虛擬幣影響：</strong>${impactText}</p>
       <p class="analysis-note"><strong>交易分析：</strong>${colorizeBiasWords(analysisText)}</p>
+      ${mergedHint}
     `;
     root.appendChild(card);
   });
@@ -434,6 +438,9 @@ function renderGlobalRisks(data) {
 
   risks.forEach((risk) => {
     const translatedChange = translateRiskText(risk.keyChange || risk.title);
+    const mergedHint = Number(risk.mergedCount || 1) > 1
+      ? `<p class="kv">已整合同類事件 ${risk.mergedCount} 則</p>`
+      : "";
     const card = document.createElement("article");
     card.className = "card";
     card.innerHTML = `
@@ -442,6 +449,7 @@ function renderGlobalRisks(data) {
       <p class="change"><strong>具體變化：</strong>${translatedChange}</p>
       <p class="impact"><strong>對虛擬幣影響：</strong>${stripHtml(risk.cryptoImpact)}</p>
       <p class="analysis-note"><strong>短期方向：</strong>${biasSpan(stripHtml(risk.shortTermBias || "震盪"))}</p>
+      ${mergedHint}
     `;
     root.appendChild(card);
   });
