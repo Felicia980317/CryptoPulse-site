@@ -58,6 +58,21 @@ function toNumber(value) {
 }
 
 function buildRateCutOutlook(data) {
+  const concrete = data.rateCutData;
+  if (concrete?.mode === "concrete") {
+    return {
+      mode: "concrete",
+      probability: Math.round(Number(concrete.nextCutProbability ?? 0)),
+      monthLabel: concrete.nextMonthLabel || "待定",
+      eventTitle: "聯邦基金利率路徑",
+      basis: `觀測日：${concrete.observationDate ? fmt.format(new Date(concrete.observationDate)) : "未知"}`,
+      sourceName: concrete.sourceName || "市場隱含機率",
+      sourceUrl: concrete.sourceUrl || "",
+      firstLikelyCutMonth: concrete.firstLikelyCutMonth || null,
+      firstLikelyCutProbability: concrete.firstLikelyCutProbability ?? null
+    };
+  }
+
   const macroEvents = data.macroEvents || [];
 
   const upcomingFomc = macroEvents
@@ -100,9 +115,11 @@ function buildRateCutOutlook(data) {
 
   if (!upcomingFomc?.datetime) {
     return {
+      mode: "model",
       probability,
       monthLabel: "待定",
-      eventTitle: "下一次 FOMC"
+      eventTitle: "下一次 FOMC",
+      basis: "模型：FOMC/CPI/NFP/外部風險"
     };
   }
 
@@ -115,6 +132,7 @@ function buildRateCutOutlook(data) {
   ].join(" / ");
 
   return {
+    mode: "model",
     probability,
     monthLabel: `${nextDate.getFullYear()}年${nextDate.getMonth() + 1}月`,
     eventTitle: upcomingFomc.title,
@@ -231,9 +249,11 @@ function renderOverview(data) {
       sub: "整合宏觀、外部風險、幣圈訊號"
     },
     {
-      title: "降息機率（模型估算）",
+      title: rateCutOutlook.mode === "concrete" ? "降息機率（市場隱含）" : "降息機率（模型估算）",
       valueHtml: probabilitySpan(rateCutOutlook.probability),
-      sub: `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）｜依據：${rateCutOutlook.basis || "FOMC/CPI/NFP/外部風險"}｜非 FedWatch 官方機率`,
+      sub: rateCutOutlook.mode === "concrete"
+        ? `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）｜${rateCutOutlook.basis}｜來源：${rateCutOutlook.sourceName}${rateCutOutlook.firstLikelyCutMonth ? `｜首次達 50% 月份：${rateCutOutlook.firstLikelyCutMonth}（${Math.round(rateCutOutlook.firstLikelyCutProbability || 0)}%）` : ""}`
+        : `可能時點：${rateCutOutlook.monthLabel}（${rateCutOutlook.eventTitle}）｜依據：${rateCutOutlook.basis || "FOMC/CPI/NFP/外部風險"}｜模型評估（非官方機率）`,
       targetId: "macro-section"
     },
     {
