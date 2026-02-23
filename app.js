@@ -253,16 +253,9 @@ function renderOverallTrend(data) {
       : String(trend);
     const lines = reasonLines(reason);
     const requiredKeys = ["主因", "傳導", "風險情境", "觀察指標", "失效條件"];
-    const isTemplateLike = requiredKeys.every((key) =>
-      lines.some((line) => new RegExp(`^${key}\s*[:：]`).test(normalizeReasonLine(line)))
-    );
-
-    let displayLines = lines.map(normalizeReasonLine);
+    let displayLines = lines.map(normalizeReasonLine).filter(Boolean);
     if (displayLines.length === 0) {
-      displayLines = ["主因：未提供", "傳導：未提供", "風險情境：未提供", "觀察指標：未提供", "失效條件：未提供"];
-    } else if (!isTemplateLike) {
-      const missing = requiredKeys.filter((key) => !displayLines.some((line) => new RegExp(`^${key}\s*[:：]`).test(line)));
-      displayLines = [...displayLines, ...missing.map((key) => `${key}：未提供`)];
+      displayLines = requiredKeys.map((key) => `${key}：未提供`);
     }
 
     const conditionLine = hasCondition ? `<div><strong>附帶條件：</strong>${colorizeBiasWords(condition)}</div>` : "";
