@@ -397,11 +397,11 @@ function renderOverallTrend(data) {
           ${hasAnySection
             ? keys.map((k) => `
               <div class="reason-row">
-                <div class="reason-key">${k}</div>
-                <div class="reason-val">${colorizeMultiline(String(sections[k] || "").trim() || "—")}</div>
+                <div class="reason-key" style="font-size: 1.1em;">${k}</div>
+                <div class="reason-val" style="font-size: 1.1em; color: #e2e8f0; line-height: 1.6;">${colorizeMultiline(String(sections[k] || "").trim() || "—")}</div>
               </div>
             `).join("")
-            : `<div class="reason-row"><div class="reason-key">說明</div><div class="reason-val">${colorizeMultiline(fallbackText || "—")}</div></div>`
+            : `<div class="reason-row" style="grid-template-columns: 1fr;"><div class="reason-val" style="font-size: 1.15em; color: #e2e8f0; line-height: 1.6;">${colorizeMultiline(fallbackText || "—")}</div></div>`
           }
         </div>
       </div>
